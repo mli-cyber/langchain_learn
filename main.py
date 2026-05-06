@@ -1,7 +1,10 @@
+# load the environment variables
 from dotenv import load_dotenv
-
 load_dotenv()
 
+# 
+from typing import List
+from pydantic import BaseModel, Field
 from langchain.agents import create_agent
 from langchain.tools import tool
 from langchain_core.messages import HumanMessage
@@ -9,26 +12,19 @@ from langchain_openai import ChatOpenAI
 from langchain_ollama import ChatOllama
 from langchain_tavily import TavilySearch
 
+class Source(BaseModel):
+    """ Schema for a source used by agent"""
 
-# from tavily import TavilyClient
+    url:str = Field(description="The URL of the source")
 
-# tavily_client = TavilyClient()
+class AgentResponse(BaseModel):
+    """ Schema for agent response with answer and souces"""
 
-# @tool
-# def search(query: str) -> str:
-#     """
-#     Tool that searches over internet
-#     Args:
-#         query: The query to search for
-#     Returns:
-#         The search result
-#     """
-#     print(f"Searching the web for {query}")
-#     results = tavily_client.search(query)
-#     return results
+    answer:str = Field(description="The agent's answer to the query")
 
-llm = ChatOpenAI(model="gpt-5-mini")
-# llm = ChatOllama(model="gpt-oss:20b", temperature=0.2)
+
+# llm = ChatOpenAI(model="gpt-5-mini")
+llm = ChatOllama(model="gpt-oss:20b", temperature=0.2)
 tools = [TavilySearch()]
 agent = create_agent(model=llm, tools=tools)
 
