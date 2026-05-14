@@ -10,7 +10,8 @@ from langchain.messages import HumanMessage, SystemMessage, ToolMessage
 from langsmith import traceable
 
 MAX_ITERATIONS = 10
-MODEL = "qwen3:1.7b"
+OLLAMA_MODEL =  "qwen3.5:9b" # "gpt-oss:20b" # "qwen3:1.7b"
+OPENAI_MODEL = "gpt-4o-mini" # "gpt-4o" # "gpt-4o-mini"
 
 
 # --- Tools (langchain @tools decorator) ---
@@ -42,7 +43,7 @@ def run_agent(question:str):
     tools = [get_product_price, apply_discount]
     tools_dict = {t.name: t for t in tools}
 
-    llm = init_chat_model(f"ollama:{MODEL}", temperature=0, base_url=os.getenv("OLLAMA_HOST_URL"))
+    llm = init_chat_model(f"ollama:{OLLAMA_MODEL}", temperature=0, base_url=os.getenv("OLLAMA_HOST_URL"))
     llm_with_tools = llm.bind_tools(tools)
 
     print(f"Question: {question}")
