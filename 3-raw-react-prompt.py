@@ -9,7 +9,7 @@ import ollama
 from langsmith import traceable
 
 MAX_ITERATIONS = 10
-MODEL = "qwen3:1.7b"
+MODEL = "qwen3:1.7b" # "gpt-oss:20b" # "qwen3:1.7b"
 OLLAMA_HOST = os.getenv("OLLAMA_HOST_URL") or os.getenv("OLLAMA_HOST")
 ollama_client = ollama.Client(host=OLLAMA_HOST)
 
@@ -56,25 +56,39 @@ tool_names = ", ".join(tools.keys())
 # --- React Prompt ---
 
 react_prompt = f"""
-STRICT RULES — you must follow these exactly:
-1. NEVER guess or assume any product price. You MUST call get_product_price first to get the real price.
-2. Only call apply_discount AFTER you have received a price from get_product_price. Pass the exact price returned by get_product_price — do NOT pass a made-up number.
-3. NEVER calculate discounts yourself using math. Always use the apply_discount tool.
-4. If the user does not specify a discount tier, ask them which tier to use — do NOT assume one.
+You are a ReAct agent that solves the user's question by reasoning step-by-step and using tools when needed.
 
-Answer the following question as best you can. You have access to the following tools:
+You have access to the following tools:
+
 {tool_descriptions}
 
-Use the following format:
+Tool names:
+[{tool_names}]
+
+General rules:
+1. Use tools when the answer depends on information or computation that a tool can provide.
+2. Do not guess values that can be obtained from a tool.
+3. Before calling a tool, make sure you have all required inputs for that tool.
+4. If a required input is missing, first use another tool or ask the user for the missing information.
+5. After each Observation, update what you know.
+6. Do not call the same tool with the same input again if the previous Observation was valid.
+7. If an Observation gives you a value needed by another tool, use that observed value exactly.
+8. Do not perform calculations yourself if there is a tool designed for that calculation.
+9. When you have enough information to answer the original question, stop using tools and give the Final Answer.
+10. Action must be exactly one of [{tool_names}].
+11. Do not invent tool names.
+12. Do not write your own Observation. Observations come only from tool results.
+
+Use this exact format:
 
 Question: the input question you must answer
-Thought: you should always think about what to do
+Thought: reason about what information is needed and which tool should be used
 Action: the action to take, one of [{tool_names}]
 Action Input: the input to the action, as comma-separated values
 Observation: the result of the action
-... (this Thought/Action/Action Input/Observation can repeat N times)
+... this Thought/Action/Action Input/Observation sequence may repeat
 Thought: I now know the final answer
-Final Answer: the final answer to the original input question
+Final Answer: the final answer to the original question
 
 Begin!
 
@@ -112,7 +126,11 @@ def run_agent(question: str):
             options={"stop": ["\nObservation:"], "temperature": 0.0}
         )
 
-        output = response.message.content
+        content = getattr(response.message, "content", "") or ""
+        thinking = getattr(response.message, "thinking", "") or ""
+
+        output = content.strip() or thinking.strip()
+
         print(f"  [LLM Output] {output}")
 
         print(f"    [Parsing] Looking for Final Answer in LLM Output")
